@@ -1,26 +1,67 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Product } from './entities/product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
 @Injectable()
 export class ProductService {
-  create(createProductDto: CreateProductDto) {
-    return 'This action adds a new product';
+  constructor(
+    @InjectRepository(Product)
+    private productRepository: Repository<Product>,
+  ) {}
+
+  async create(
+    createDto: CreateProductDto,
+    imagePath?: string,
+    imagePaths?: string[],
+  ) {
+    const product = this.productRepository.create({
+      ...createDto,
+      image: imagePath,
+      images: imagePaths,
+    });
+    return await this.productRepository.save(product);
   }
 
-  findAll() {
-    return `This action returns all product`;
+  async findAll(filters: { name?: string; date?: string; stock?: number }) {
+    const query = this.productRepository.createQueryBuilder('product');
+
+    if (filters.name) {
+      query.andWhere('product.name ILIKE :name', { name: `%${filters.name}%` });
+    }
+
+    if (filters.date) {
+      query.andWhere('DATE(product.createdAt) = :date', { date: filters.date });
+    }
+
+    if (filters.stock !== undefined) {
+      query.andWhere('product.stock >= :stock', { stock: filters.stock });
+    }
+
+    return await query.getMany();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} product`;
+  async findOne(id: number) {
+    const product = await this.productRepository.findOne({ where: { id } });
+    if (!product) throw new NotFoundException(`Product #${id} not found`);
+    return product;
   }
 
-  update(id: number, updateProductDto: UpdateProductDto) {
-    return `This action updates a #${id} product`;
+  async update(
+    id: number,
+    updateDto: UpdateProductDto,
+    imagePath?: string,
+  ) {
+    const product = await this.findOne(id);
+    Object.assign(product, updateDto);
+    if (imagePath) product.image = imagePath;
+    return this.productRepository.save(product);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} product`;
+  async remove(id: number) {
+    const product = await this.findOne(id);
+    return this.productRepository.remove(product);
   }
 }
