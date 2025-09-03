@@ -11,6 +11,8 @@ import {
   UseInterceptors,
   ParseIntPipe,
   Query,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -35,59 +37,95 @@ const storage = {
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
-  // Create product with single image
   @Post('single')
   @UseInterceptors(FileInterceptor('image', storage))
-  createSingle(
+  async createSingle(
     @Body() createDto: CreateProductDto,
     @UploadedFile() file?: Multer.File,
   ) {
-    const imagePath = file ? file.filename : undefined;
-    return this.productService.create(createDto, imagePath, undefined);
+    try {
+      const imagePath = file ? file.filename : undefined;
+      return await this.productService.create(createDto, imagePath, undefined);
+    } catch (error) {
+      throw new HttpException(
+        { message: 'Failed to create product', error },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
 
-  // Create product with multiple images
   @Post('multiple')
   @UseInterceptors(FilesInterceptor('images', 5, storage))
-  createMultiple(
+  async createMultiple(
     @Body() createDto: CreateProductDto,
     @UploadedFiles() files?: Multer.File[],
   ) {
-    const imagePaths = files ? files.map((f) => f.filename) : undefined;
-    return this.productService.create(createDto, undefined, imagePaths);
+    try {
+      const imagePaths = files ? files.map((f) => f.filename) : undefined;
+      return await this.productService.create(createDto, undefined, imagePaths);
+    } catch (error) {
+      throw new HttpException(
+        { message: 'Failed to create product', error },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
 
-  // Get all products with optional filters
   @Get()
-  findAll(
+  async findAll(
     @Query('name') name?: string,
     @Query('date') date?: string,
     @Query('stock') stock?: number,
   ) {
-    return this.productService.findAll({ name, date, stock });
+    try {
+      return await this.productService.findAll({ name, date, stock });
+    } catch (error) {
+      throw new HttpException(
+        { message: 'Failed to fetch products', error },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
 
-  // Get single product by ID
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.productService.findOne(id);
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    try {
+      return await this.productService.findOne(id);
+    } catch (error) {
+      throw new HttpException(
+        { message: `Failed to fetch product #${id}`, error },
+        HttpStatus.NOT_FOUND,
+      );
+    }
   }
 
-  // Update product (single image upload)
   @Put(':id')
   @UseInterceptors(FileInterceptor('image', storage))
-  update(
+  async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateProductDto,
     @UploadedFile() file?: Multer.File,
   ) {
-    const imagePath = file ? file.filename : undefined;
-    return this.productService.update(id, updateDto, imagePath);
+    try {
+      const imagePath = file ? file.filename : undefined;
+      return await this.productService.update(id, updateDto, imagePath);
+    } catch (error) {
+      throw new HttpException(
+        { message: `Failed to update product #${id}`, error },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
 
-  // Delete product by ID
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.productService.remove(id);
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    try {
+      return await this.productService.remove(id);
+    } catch (error) {
+      throw new HttpException(
+        { message: `Failed to delete product #${id}`, error },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
 }
