@@ -72,20 +72,20 @@ export class ProductController {
   }
 
   @Get()
-  async findAll(
-    @Query('name') name?: string,
-    @Query('date') date?: string,
-    @Query('stock') stock?: number,
-  ) {
-    try {
-      return await this.productService.findAll({ name, date, stock });
-    } catch (error) {
-      throw new HttpException(
-        { message: 'Failed to fetch products', error },
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+async findAll(
+  @Query('name') name?: string,
+  @Query('date') date?: string,
+  @Query('stock') stock?: number,
+) {
+  try {
+    return await this.productService.findAllWithFilters({ name, date, stock });
+  } catch (error) {
+    throw new HttpException(
+      { message: 'Failed to fetch products', error },
+      HttpStatus.BAD_REQUEST,
+    );
   }
+}
 
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {
@@ -129,7 +129,3 @@ export class ProductController {
     }
   }
 }
-
-// https://karmegakumar18ait-gmail.tinytake.com/msc/MTEwOTQ5MTZfMjQ4MjY3NDk
-
-// https://karmegakumar18ait-gmail.tinytake.com/msc/MTEwOTQ5MzJfMjQ4MjY3NjU

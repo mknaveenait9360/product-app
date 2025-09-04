@@ -1,8 +1,8 @@
-import { Repository, FindOptionsWhere, DeepPartial } from "typeorm";
-import { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity.js";
+import { Repository, DeepPartial, FindOptionsWhere, ObjectLiteral } from 'typeorm';
+import { NotFoundException } from '@nestjs/common';
 
-export abstract class BaseService<T extends { id: number }> {
-  constructor(private readonly repository: Repository<T>) {}
+export abstract class BaseService<T extends ObjectLiteral & { id: number }> {
+  constructor(protected readonly repository: Repository<T>) {}
 
   async create(data: DeepPartial<T>): Promise<T> {
     const entity = this.repository.create(data);
@@ -13,12 +13,18 @@ export abstract class BaseService<T extends { id: number }> {
     return this.repository.find();
   }
 
-  async findOne(id: number): Promise<T | null> {
-    return this.repository.findOneBy({ id } as FindOptionsWhere<T>);
+  async findOne(id: number): Promise<T> {
+    const entity = await this.repository.findOne({
+      where: { id } as FindOptionsWhere<T>,
+    });
+    if (!entity) {
+      throw new NotFoundException(`${this.repository.metadata.name} not found`);
+    }
+    return entity;
   }
 
-  async update(id: number, data: QueryDeepPartialEntity<T>): Promise<T | null> {
-    await this.repository.update(id, data);
+  async update(id: number, data: DeepPartial<T>): Promise<T> {
+    await this.repository.update(id, data as any);
     return this.findOne(id);
   }
 
