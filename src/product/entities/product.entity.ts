@@ -1,10 +1,8 @@
 import { CONFIGURABLE_MODULE_ID } from "@nestjs/common/module-utils/constants";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from "typeorm";
+import { BaseEntity } from "typeorm";
 @Entity('products')
-export class Product {
-    @PrimaryGeneratedColumn()
-    id: number;
-
+export class Product extends BaseEntity{
     @Column()
     name: string;
 
@@ -22,8 +20,5 @@ export class Product {
 
     @Column({default: 0})
     stock: number;
-
-    @CreateDateColumn()
-    createdAt: Date;
 
 }
