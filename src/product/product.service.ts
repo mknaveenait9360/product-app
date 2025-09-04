@@ -1,10 +1,9 @@
-import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { APP_MESSAGES } from '../common/contants';
 import { BaseService } from 'src/common/services/base.service';
 
 @Injectable()
@@ -29,7 +28,6 @@ export class ProductService extends BaseService<Product> {
     return await this.productRepository.save(product);
   }
 
-
   async findAllWithFilters(filters: { name?: string; date?: string; stock?: number }) {
     const query = this.productRepository.createQueryBuilder('product');
 
@@ -48,11 +46,7 @@ export class ProductService extends BaseService<Product> {
     return await query.getMany();
   }
 
-  async update(
-    id: number,
-    updateDto: UpdateProductDto,
-    imagePath?: string,
-  ): Promise<Product> {
+  async update(id: number, updateDto: UpdateProductDto, imagePath?: string): Promise<Product> {
     const product = await this.findOne(id);
     Object.assign(product, updateDto);
     if (imagePath) product.image = imagePath;

@@ -24,11 +24,17 @@ export abstract class BaseService<T extends ObjectLiteral & { id: number }> {
   }
 
   async update(id: number, data: DeepPartial<T>): Promise<T> {
-    await this.repository.update(id, data as any);
+    const updateResult = await this.repository.update(id, data);
+    if (updateResult.affected === 0) {
+      throw new NotFoundException(`${this.repository.metadata.name} not found for update`);
+    }
     return this.findOne(id);
   }
 
   async remove(id: number): Promise<void> {
-    await this.repository.delete(id);
+    const deleteResult = await this.repository.delete(id);
+    if (deleteResult.affected === 0) {
+      throw new NotFoundException(`${this.repository.metadata.name} not found for deletion`);
+    }
   }
 }

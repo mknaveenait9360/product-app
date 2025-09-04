@@ -15,115 +15,183 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import type { Multer } from 'multer';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
+// Define a proper type for uploaded files
+interface SafeUploadedFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  destination: string;
+  filename: string;
+  path: string;
+  buffer?: Buffer;
+}
 
-const storage = {
-  storage: diskStorage({
-    destination: './uploads',
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + extname(file.originalname));
-    },
-  }),
-};
+// Type guard to check if an object is a valid uploaded file
+function isValidUploadedFile(file: unknown): file is SafeUploadedFile {
+  return (
+    typeof file === 'object' &&
+    file !== null &&
+    'filename' in file &&
+    'originalname' in file &&
+    typeof (file as Record<string, unknown>).filename === 'string' &&
+    typeof (file as Record<string, unknown>).originalname === 'string'
+  );
+}
 
+// Type guard for array of uploaded files
+function isValidUploadedFileArray(files: unknown): files is SafeUploadedFile[] {
+  return Array.isArray(files) && files.every(isValidUploadedFile);
+}
+
+// ---------- Helpers ----------
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
+function safeFileName(file: unknown): string | undefined {
+  if (isValidUploadedFile(file)) {
+    return file.filename;
+  }
+  return undefined;
+}
+
+function safeFileNames(files: unknown): string[] | undefined {
+  if (isValidUploadedFileArray(files)) {
+    return files.map((file) => file.filename);
+  }
+  return undefined;
+}
+
+// ---------- Controller ----------
 @Controller('products')
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
   @Post('single')
-  @UseInterceptors(FileInterceptor('image', storage))
+  @UseInterceptors(
+    FileInterceptor('image', {
+      dest: './uploads',
+    }),
+  )
   async createSingle(
     @Body() createDto: CreateProductDto,
-    @UploadedFile() file?: Multer.File,
-  ) {
+    @UploadedFile() file: unknown,
+  ): Promise<unknown> {
     try {
-      const imagePath = file ? file.filename : undefined;
-      return await this.productService.create(createDto, imagePath, undefined);
-    } catch (error) {
+      const imagePath = safeFileName(file);
+      const result = await this.productService.create(createDto, imagePath);
+      return result;
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
       throw new HttpException(
-        { message: 'Failed to create product', error },
+        { message: 'Failed to create product', error: message },
         HttpStatus.BAD_REQUEST,
       );
     }
   }
 
   @Post('multiple')
-  @UseInterceptors(FilesInterceptor('images', 5, storage))
+  @UseInterceptors(
+    FilesInterceptor('images', 5, {
+      dest: './uploads',
+    }),
+  )
   async createMultiple(
     @Body() createDto: CreateProductDto,
-    @UploadedFiles() files?: Multer.File[],
-  ) {
+    @UploadedFiles() files: unknown,
+  ): Promise<unknown> {
     try {
-      const imagePaths = files ? files.map((f) => f.filename) : undefined;
-      return await this.productService.create(createDto, undefined, imagePaths);
-    } catch (error) {
+      const imagePaths = safeFileNames(files);
+      const result = await this.productService.create(createDto, undefined, imagePaths);
+      return result;
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
       throw new HttpException(
-        { message: 'Failed to create product', error },
+        { message: 'Failed to create products', error: message },
         HttpStatus.BAD_REQUEST,
       );
     }
   }
 
   @Get()
-async findAll(
-  @Query('name') name?: string,
-  @Query('date') date?: string,
-  @Query('stock') stock?: number,
-) {
-  try {
-    return await this.productService.findAllWithFilters({ name, date, stock });
-  } catch (error) {
-    throw new HttpException(
-      { message: 'Failed to fetch products', error },
-      HttpStatus.BAD_REQUEST,
-    );
+  async findAll(
+    @Query('name') name?: string,
+    @Query('date') date?: string,
+    @Query('stock') stock?: string,
+  ): Promise<unknown> {
+    try {
+      const stockNumber = stock ? parseInt(stock, 10) : undefined;
+      const result = await this.productService.findAllWithFilters({
+        name,
+        date,
+        stock: stockNumber,
+      });
+      return result;
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
+      throw new HttpException(
+        { message: 'Failed to fetch products', error: message },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
-}
 
   @Get(':id')
-  async findOne(@Param('id', ParseIntPipe) id: number) {
+  async findOne(@Param('id', ParseIntPipe) id: number): Promise<unknown> {
     try {
-      return await this.productService.findOne(id);
-    } catch (error) {
+      const result = await this.productService.findOne(id);
+      return result;
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
       throw new HttpException(
-        { message: `Failed to fetch product #${id}`, error },
+        { message: `Failed to fetch product #${id}`, error: message },
         HttpStatus.NOT_FOUND,
       );
     }
   }
 
   @Put(':id')
-  @UseInterceptors(FileInterceptor('image', storage))
+  @UseInterceptors(
+    FileInterceptor('image', {
+      dest: './uploads',
+    }),
+  )
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateProductDto,
-    @UploadedFile() file?: Multer.File,
-  ) {
+    @UploadedFile() file: unknown,
+  ): Promise<unknown> {
     try {
-      const imagePath = file ? file.filename : undefined;
-      return await this.productService.update(id, updateDto, imagePath);
-    } catch (error) {
+      const imagePath = safeFileName(file);
+      const result = await this.productService.update(id, updateDto, imagePath);
+      return result;
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
       throw new HttpException(
-        { message: `Failed to update product #${id}`, error },
+        { message: `Failed to update product #${id}`, error: message },
         HttpStatus.BAD_REQUEST,
       );
     }
   }
 
   @Delete(':id')
-  async remove(@Param('id', ParseIntPipe) id: number) {
+  async remove(@Param('id', ParseIntPipe) id: number): Promise<unknown> {
     try {
-      return await this.productService.remove(id);
-    } catch (error) {
+      const result = await this.productService.remove(id);
+      return result;
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
       throw new HttpException(
-        { message: `Failed to delete product #${id}`, error },
+        { message: `Failed to delete product #${id}`, error: message },
         HttpStatus.BAD_REQUEST,
       );
     }
