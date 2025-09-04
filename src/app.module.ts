@@ -16,7 +16,7 @@ import { DB_CONFIG } from './common/contants';
         host: configService.get<string>(DB_CONFIG.HOST) || 'localhost',
         port: parseInt(configService.get<string>(DB_CONFIG.PORT) || '5432', 10),
         username: configService.get<string>(DB_CONFIG.USERNAME) || 'postgres',
-        password: configService.get<string>(DB_CONFIG.PASSWORD) || '',
+        password: configService.get<string>(DB_CONFIG.PASSWORD) || 'naveen357',
         database: configService.get<string>(DB_CONFIG.NAME) || 'product_db2',
         autoLoadEntities: true,
         synchronize: true,

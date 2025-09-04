@@ -22,7 +22,7 @@ import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
-// Multer storage configuration
+
 const storage = {
   storage: diskStorage({
     destination: './uploads',
@@ -129,3 +129,7 @@ export class ProductController {
     }
   }
 }
+
+// https://karmegakumar18ait-gmail.tinytake.com/msc/MTEwOTQ5MTZfMjQ4MjY3NDk
+
+// https://karmegakumar18ait-gmail.tinytake.com/msc/MTEwOTQ5MzJfMjQ4MjY3NjU
